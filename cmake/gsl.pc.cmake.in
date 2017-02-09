@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@INSTALL_BIN_DIR@
+libdir=@INSTALL_LIB_DIR@
+includedir=@INSTALL_INC_DIR@
+GSL_CBLAS_LIB=-lgslcblas
+
+Name: GSL
+Description: GNU Scientific Library
+Version: @VERSION@
+Libs: @GSL_LIBS@ ${GSL_CBLAS_LIB} @GSL_LIBM@ @LIBS@
+Cflags: @CMAKE_C_FLAGS@
