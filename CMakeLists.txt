@@ -150,6 +150,26 @@ foreach (dir "." ${dirs})
   endforeach ()
 endforeach ()
 
+set(DEPRICATED_FUNCTIONS 
+    gsl_multilarge_nlinear_df
+    gsl_multilarge_nlinear_fdfvv
+    gsl_block_complex_long_double_fprintf
+    gsl_block_complex_long_double_fscanf 
+    gsl_block_complex_long_double_raw_fprintf
+    gsl_block_complex_long_double_raw_fscanf
+    gsl_block_long_double_fprintf
+    gsl_block_long_double_fscanf
+    gsl_block_long_double_raw_fprintf
+    gsl_block_long_double_raw_fscanf
+    gsl_matrix_complex_long_double_fprintf
+    gsl_matrix_complex_long_double_fscanf
+    gsl_matrix_long_double_fprintf
+    gsl_matrix_long_double_fscanf
+    gsl_vector_complex_long_double_fprintf
+    gsl_vector_complex_long_double_fscanf
+    gsl_vector_long_double_fprintf
+    gsl_vector_long_double_fscanf
+)
 if (BUILD_SHARED_LIBS)
   include(CheckCCompilerFlag)
   check_c_compiler_flag(-fPIC HAVE_FPIC)
@@ -168,7 +188,8 @@ if (BUILD_SHARED_LIBS)
       string(REGEX MATCHALL "${RE}" candidates "${content}")
       foreach (line ${candidates})
         if (NOT line MATCHES typedef AND line MATCHES "${RE}")
-            if (NOT ${CMAKE_MATCH_2} STREQUAL gsl_multilarge_nlinear_df AND NOT ${CMAKE_MATCH_2} STREQUAL gsl_multilarge_nlinear_fdfvv)
+            list(FIND DEPRICATED_FUNCTIONS ${CMAKE_MATCH_2} DEPRICATED_FUNCTION_INDEX)
+            if (${DEPRICATED_FUNCTION_INDEX} EQUAL -1)
                 file(APPEND gsl.def "   ${CMAKE_MATCH_2}\n")
             endif()
         endif ()
