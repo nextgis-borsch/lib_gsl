@@ -79,13 +79,29 @@ include(configure)
 
 include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})
 
+# Fix windows build
+if(WIN32)
+    file(READ ieee-utils/env.c _ENV_C_CONTENTS)
+    string(REPLACE
+"extern const char *fp_env_string;
+    p = fp_env_string;"
+"if (p == 0) return;
+  if (*p == '\\0') return ;"
+    _ENV_C_CONTENTS
+    "${_ENV_C_CONTENTS}"
+    )
+    file(WRITE ieee-utils/env.c "${_ENV_C_CONTENTS}")
+    file(WRITE ${CMAKE_BINARY_DIR}/unistd.h "/* nop */")
+    add_definitions(-DHIDE_INLINE_STATIC)
+endif()
+
 if(BUILD_TESTING)
     enable_testing()
 
     # Adds a GSL test. Usage:
     #   add_gsl_test(<exename> <source> ...)
     function(add_gsl_test exename)
-      if (GSL_DISABLE_TESTS)
+      if (GSL_DISABLE_TESTS OR exename MATCHES specfunc_test)
         return()
       endif ()
       add_executable(${exename} ${ARGN})
@@ -181,6 +197,47 @@ set(DEPRICATED_FUNCTIONS
     gsl_vector_long_double_fprintf
     gsl_vector_long_double_fscanf
 )
+
+if(HAVE_INLINE)
+    set(DEPRICATED_FUNCTIONS ${DEPRICATED_FUNCTIONS}
+        gsl_combination_get gsl_complex_poly_complex_eval gsl_complex_rect
+        gsl_linalg_givens_gv gsl_matrix_char_const_ptr
+        gsl_matrix_char_get gsl_matrix_char_ptr gsl_matrix_char_set
+        gsl_matrix_complex_const_ptr gsl_matrix_complex_float_const_ptr gsl_matrix_complex_float_get gsl_matrix_complex_float_ptr gsl_matrix_complex_float_set gsl_matrix_complex_get
+        gsl_matrix_complex_long_double_const_ptr gsl_matrix_complex_long_double_get gsl_matrix_complex_long_double_ptr gsl_matrix_complex_long_double_set gsl_matrix_complex_ptr
+        gsl_matrix_complex_set gsl_matrix_const_ptr gsl_matrix_float_const_ptr gsl_matrix_float_get
+        gsl_matrix_float_ptr gsl_matrix_float_set gsl_matrix_get gsl_matrix_int_const_ptr
+        gsl_matrix_int_get gsl_matrix_int_ptr gsl_matrix_int_set gsl_matrix_long_const_ptr
+        gsl_matrix_long_double_const_ptr gsl_matrix_long_double_get gsl_matrix_long_double_ptr gsl_matrix_long_double_set gsl_matrix_long_get
+        gsl_matrix_long_ptr gsl_matrix_long_set gsl_matrix_ptr gsl_matrix_set
+        gsl_matrix_short_const_ptr gsl_matrix_short_get gsl_matrix_short_ptr gsl_matrix_short_set
+        gsl_matrix_uchar_const_ptr gsl_matrix_uchar_get gsl_matrix_uchar_ptr gsl_matrix_uchar_set
+        gsl_matrix_uint_const_ptr gsl_matrix_uint_get gsl_matrix_uint_ptr gsl_matrix_uint_set
+        gsl_matrix_ulong_const_ptr gsl_matrix_ulong_get gsl_matrix_ulong_ptr
+        gsl_matrix_ulong_set gsl_matrix_ushort_const_ptr gsl_matrix_ushort_get
+        gsl_matrix_ushort_ptr gsl_matrix_ushort_set gsl_multiset_get gsl_permutation_get
+        gsl_poly_complex_eval gsl_poly_dd_eval gsl_pow_2 gsl_pow_3 gsl_pow_4 gsl_pow_5
+        gsl_pow_6 gsl_pow_7 gsl_pow_8 gsl_pow_9 gsl_qrng_get gsl_rng_get gsl_rng_uniform
+        gsl_rng_uniform_int gsl_vector_char_const_ptr gsl_vector_char_get
+        gsl_vector_char_ptr gsl_vector_char_set
+        gsl_vector_complex_const_ptr gsl_vector_complex_float_const_ptr gsl_vector_complex_float_get gsl_vector_complex_float_ptr gsl_vector_complex_float_set gsl_vector_complex_get
+        gsl_vector_complex_long_double_const_ptr gsl_vector_complex_long_double_get gsl_vector_complex_long_double_ptr gsl_vector_complex_long_double_set gsl_vector_complex_ptr
+        gsl_vector_complex_set gsl_vector_const_ptr
+        gsl_vector_float_const_ptr gsl_vector_float_get
+        gsl_vector_float_ptr gsl_vector_float_set gsl_vector_get
+        gsl_vector_int_const_ptr gsl_vector_int_get
+        gsl_vector_int_ptr gsl_vector_int_set gsl_vector_long_const_ptr
+        gsl_vector_long_double_const_ptr gsl_vector_long_double_get gsl_vector_long_double_ptr gsl_vector_long_double_set gsl_vector_long_get
+        gsl_vector_long_ptr gsl_vector_long_set gsl_vector_ptr gsl_vector_set
+        gsl_vector_short_const_ptr  gsl_vector_short_get gsl_vector_short_ptr gsl_vector_short_set
+        gsl_vector_uchar_const_ptr  gsl_vector_uchar_get gsl_vector_uchar_ptr gsl_vector_uchar_set
+        gsl_vector_uint_const_ptr gsl_vector_uint_get gsl_vector_uint_ptr gsl_vector_uint_set
+        gsl_vector_ulong_const_ptr  gsl_vector_ulong_get gsl_vector_ulong_ptr
+        gsl_vector_ulong_set gsl_vector_ushort_const_ptr  gsl_vector_ushort_get
+        gsl_vector_ushort_ptr gsl_vector_ushort_set
+    )
+endif()
+
 if (BUILD_SHARED_LIBS)
   include(CheckCCompilerFlag)
   check_c_compiler_flag(-fPIC HAVE_FPIC)
@@ -205,6 +262,17 @@ if (BUILD_SHARED_LIBS)
             endif()
         endif ()
       endforeach ()
+
+      set(RE "\n([^\n]*[ *])?(cblas_[A-Za-z0-9_]+)[ ]*\\(")
+      string(REGEX MATCHALL "${RE}" candidates "${content}")
+      foreach (line ${candidates})
+          if (NOT line MATCHES typedef AND line MATCHES "${RE}")
+              list(FIND DEPRICATED_FUNCTIONS ${CMAKE_MATCH_2} DEPRICATED_FUNCTION_INDEX)
+              if (${DEPRICATED_FUNCTION_INDEX} EQUAL -1)
+                  file(APPEND gsl.def "   ${CMAKE_MATCH_2}\n")
+              endif()
+          endif ()
+        endforeach ()
     endforeach ()
     set(GSL_SOURCES ${GSL_SOURCES} gsl.def)
   endif ()
