@@ -3,7 +3,7 @@
 # Purpose:  CMake build scripts
 # Author:   Dmitry Baryshnikov, dmitry.baryshnikov@nexgis.com
 ################################################################################
-# Copyright (C) 2017, NextGIS <info@nextgis.com>
+# Copyright (C) 2017-2018, NextGIS <info@nextgis.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,14 @@ cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 
 project(gsl)
 
+if(NOT DEFINED PACKAGE_VENDOR)
+    set(PACKAGE_VENDOR NextGIS)
+endif()
+
+if(NOT DEFINED PACKAGE_BUGREPORT)
+    set(PACKAGE_BUGREPORT info@nextgis.com)
+endif()
+
 # Some init settings
 set(CMAKE_COLOR_MAKEFILE ON)
 # Set path to additional CMake modules
@@ -39,10 +47,11 @@ if(OSX_FRAMEWORK AND (BUILD_SHARED_LIBS OR BUILD_STATIC_LIBS))
 endif()
 
 if(OSX_FRAMEWORK)
-  set(INSTALL_BIN_DIR "${CMAKE_INSTALL_PREFIX}/Applications" CACHE INTERNAL "Installation directory for executables" FORCE)
-  set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/Library/Frameworks" CACHE INTERNAL "Installation directory for libraries" FORCE)
-  set(INSTALL_INC_DIR "${INSTALL_LIB_DIR}/${PROJECT_NAME}.framework/Headers" CACHE INTERNAL "Installation directory for headers" FORCE)
-  set(SKIP_INSTALL_HEADERS OFF)
+  set(INSTALL_BIN_DIR "bin" CACHE INTERNAL "Installation directory for executables" FORCE)
+  set(INSTALL_LIB_DIR "Library/Frameworks" CACHE INTERNAL "Installation directory for libraries" FORCE)
+  set(INSTALL_INC_DIR ${INSTALL_LIB_DIR}/${PROJECT_NAME}.framework/Headers CACHE INTERNAL "Installation directory for headers" FORCE)
+  set(INSTALL_CMAKECONF_DIR ${INSTALL_LIB_DIR}/${PROJECT_NAME}.framework/Resources/CMake CACHE INTERNAL "Installation directory for cmake config files" FORCE)
+  set(SKIP_INSTALL_HEADERS ON)
   set(SKIP_INSTALL_EXECUTABLES ON)
   set(SKIP_INSTALL_FILES ON)
   set(SKIP_INSTALL_EXPORT ON)
@@ -54,6 +63,7 @@ else()
     set(INSTALL_LIB_DIR ${CMAKE_INSTALL_FULL_LIBDIR} CACHE INTERNAL "Installation directory for libraries" FORCE)
     set(INSTALL_INC_DIR ${CMAKE_INSTALL_FULL_INCLUDEDIR} CACHE INTERNAL "Installation directory for headers" FORCE)
     set(INSTALL_DOC_DIR ${CMAKE_INSTALL_FULL_DOCDIR} CACHE INTERNAL "Share directory for data" FORCE)
+    set(INSTALL_CMAKECONF_DIR ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/CMake CACHE INTERNAL "Installation directory for cmake config files" FORCE)
 endif()
 
 include(util)
@@ -69,7 +79,7 @@ include(configure)
 
 include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})
 
-if(BUILD_TESTS)
+if(BUILD_TESTING)
     enable_testing()
 
     # Adds a GSL test. Usage:
@@ -134,15 +144,16 @@ foreach (dir "." ${dirs})
       if (dir STREQUAL cblas)
         # Build gslcblas as a static library on MSVC because it doesn't have a .def file.
         if (MSVC OR OSX_FRAMEWORK)
-          set(GSLCBLAS_TYPE STATIC)
+          set(GSLCBLAS_TYPE OBJECT) # STATIC)
+          set(GSL_SOURCES ${GSL_SOURCES} $<TARGET_OBJECTS:gslcblas>)
         endif ()
         add_library(gslcblas ${GSLCBLAS_TYPE} ${SOURCES})
-        target_link_libraries(gslcblas ${CMAKE_REQUIRED_LIBRARIES})
-        add_dependencies(gslcblas copy-headers)
+        # target_link_libraries(gslcblas ${CMAKE_REQUIRED_LIBRARIES})
+        # add_dependencies(gslcblas copy-headers)
       else ()
         set(GSL_SOURCES ${GSL_SOURCES} ${SOURCES})
       endif ()
-  elseif (line MATCHES "^test.*_SOURCES[ \t]*=" AND BUILD_TESTS)
+  elseif (line MATCHES "^test.*_SOURCES[ \t]*=" AND BUILD_TESTING)
       get_sources(${dir} "${line}" SOURCES)
       string(REGEX REPLACE "(.*)_SOURCES.*" "\\1" suffix ${line})
       add_gsl_test("${dir}_${suffix}" ${SOURCES})
@@ -186,11 +197,12 @@ if(BUILD_SHARED_LIBS)
         SOVERSION ${GSL_MAJOR_VERSION}
         COMPILE_DEFINITIONS DLL_EXPORT)
 elseif(OSX_FRAMEWORK)
-    set(HHEADERS
-        ${CMAKE_SOURCE_DIR}/gsl_version.h
-        ${CMAKE_SOURCE_DIR}/gsl_types.h
-    )
-    add_library(${LIB_NAME} SHARED ${GSL_SOURCES} ${HHEADERS})
+    # set(HHEADERS
+    #     ${CMAKE_SOURCE_DIR}/gsl_version.h
+    #     ${CMAKE_SOURCE_DIR}/gsl_types.h
+    # )
+    set_property(SOURCE ${GSL_HEADER_PATHS} PROPERTY MACOSX_PACKAGE_LOCATION "Headers/${PROJECT_NAME}")
+    add_library(${LIB_NAME} SHARED ${GSL_SOURCES} ${GSL_HEADER_PATHS})
     set_target_properties(${LIB_NAME} PROPERTIES
       FRAMEWORK TRUE
       FRAMEWORK_VERSION ${FRAMEWORK_VERSION}
@@ -198,7 +210,7 @@ elseif(OSX_FRAMEWORK)
       MACOSX_FRAMEWORK_BUNDLE_VERSION ${VERSION}
       MACOSX_FRAMEWORK_IDENTIFIER org.gnu.libgsl
       XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
-      PUBLIC_HEADER "${HHEADERS}"
+      # PUBLIC_HEADER "${HHEADERS}"
       VERSION ${VERSION}
       SOVERSION ${GSL_MAJOR_VERSION}
       )
@@ -206,39 +218,23 @@ else()
     add_library(${LIB_NAME} STATIC ${GSL_SOURCES} ${GSL_HEADER_PATHS})
 endif()
 
+if(NOT MSVC AND NOT OSX_FRAMEWORK)
 target_link_libraries(${LIB_NAME} gslcblas)
+endif()
 add_dependencies(gsl copy-headers)
 
-if (REGISTER_PACKAGE)
-    export(TARGETS gsl gslcblas FILE ${PROJECT_NAME}-exports.cmake)
-
-    set(EXPORT_PACKAGE_NAME GSL)
-    string(TOUPPER ${EXPORT_PACKAGE_NAME} EXPORT_PACKAGE_NAME_UPPER)
-    set(EXPORT_PACKAGE_LIB_NAME gsl)
-
-    export(PACKAGE ${EXPORT_PACKAGE_NAME})
-
-    include(CMakePackageConfigHelpers)
-    configure_package_config_file(
-        ${CMAKE_SOURCE_DIR}/cmake/PackageConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_PACKAGE_NAME}Config.cmake
-        INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
-    write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_PACKAGE_NAME}ConfigVersion.cmake
-        VERSION ${VERSION}
-        COMPATIBILITY AnyNewerVersion )
-else()
-    export(TARGETS gsl gslcblas FILE ${PROJECT_NAME}-exports.cmake EXPORT_LINK_INTERFACE_LIBRARIES)
-endif()
-
 add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+set(PACKAGE_NAME ${PROJECT_NAME})
+string(TOUPPER ${PACKAGE_NAME} PACKAGE_UPPER_NAME)
 
 if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL)
-    install(TARGETS gsl
-        RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT libraries
-        ARCHIVE DESTINATION "${INSTALL_LIB_DIR}" COMPONENT libraries
-        LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT libraries
-        FRAMEWORK DESTINATION "${INSTALL_LIB_DIR}")
+    install(TARGETS ${LIB_NAME}
+        EXPORT ${PACKAGE_UPPER_NAME}Targets
+        RUNTIME DESTINATION ${INSTALL_BIN_DIR}
+        LIBRARY DESTINATION ${INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${INSTALL_LIB_DIR}
+        INCLUDES DESTINATION ${INSTALL_INC_DIR}
+        FRAMEWORK DESTINATION ${INSTALL_LIB_DIR})
     if(NOT MSVC AND NOT OSX_FRAMEWORK)
         install(TARGETS gslcblas
             RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT libraries
@@ -251,3 +247,52 @@ if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL)
     install(FILES ${GSL_HEADER_PATHS} DESTINATION "${INSTALL_INC_DIR}/${PROJECT_NAME}")
     install(FILES ${CMAKE_BINARY_DIR}/gsl.pc DESTINATION "${INSTALL_LIB_DIR}/pkgconfig")
 endif()
+
+# Export package ===============================================================
+
+# Add path to includes to build-tree export
+target_include_directories(${LIB_NAME} INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
+# Add all targets to the build-tree export set
+export(TARGETS ${LIB_NAME}
+    FILE ${PROJECT_BINARY_DIR}/${PACKAGE_UPPER_NAME}Targets.cmake)
+
+if(REGISTER_PACKAGE)
+    # Export the package for use from the build-tree
+    # (this registers the build-tree with a global CMake-registry)
+    export(PACKAGE ${PACKAGE_UPPER_NAME})
+endif()
+
+# Create the <Package>Config.cmake file
+configure_file(cmake/PackageConfig.cmake.in
+    ${PROJECT_BINARY_DIR}/${PACKAGE_UPPER_NAME}Config.cmake @ONLY)
+
+if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL)
+    # Install the <Package>Config.cmake
+    install(FILES
+      ${PROJECT_BINARY_DIR}/${PACKAGE_UPPER_NAME}Config.cmake
+      DESTINATION ${INSTALL_CMAKECONF_DIR} COMPONENT dev)
+
+    # Install the export set for use with the install-tree
+    install(EXPORT ${PACKAGE_UPPER_NAME}Targets DESTINATION ${INSTALL_CMAKECONF_DIR} COMPONENT dev)
+endif()
+
+# Archiving ====================================================================
+
+set(CPACK_PACKAGE_NAME "${PACKAGE_NAME}")
+set(CPACK_PACKAGE_VENDOR "${PACKAGE_VENDOR}")
+set(CPACK_PACKAGE_VERSION "${VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PACKAGE_NAME} Installation")
+set(CPACK_PACKAGE_RELOCATABLE TRUE)
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_MONOLITHIC_INSTALL ON)
+set(CPACK_STRIP_FILES TRUE)
+
+# Get cpack zip archive name
+get_cpack_filename(${VERSION} PROJECT_CPACK_FILENAME)
+set(CPACK_PACKAGE_FILE_NAME ${PROJECT_CPACK_FILENAME})
+
+include(CPack)
