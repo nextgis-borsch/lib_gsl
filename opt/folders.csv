@@ -18,7 +18,7 @@ fft,fft,,"h,c,am"
 fit,fit,,"h,c,am"
 gsl,gsl,,am
 histogram,histogram,,"h,c,am"
-Ieee-utils,Ieee-utils,,"h,c,am"
+ieee-utils,ieee-utils,,"h,c,am"
 integration,integration,,"h,c,am"
 interpolation,interpolation,,"h,c,am"
 linalg,linalg,,"h,c,am"
