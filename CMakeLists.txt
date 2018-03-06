@@ -235,6 +235,7 @@ if(HAVE_INLINE)
         gsl_vector_ulong_const_ptr  gsl_vector_ulong_get gsl_vector_ulong_ptr
         gsl_vector_ulong_set gsl_vector_ushort_const_ptr  gsl_vector_ushort_get
         gsl_vector_ushort_ptr gsl_vector_ushort_set gsl_rng_uniform_pos
+        gsl_interp_bsearch gsl_poly_eval
     )
 endif()
 
