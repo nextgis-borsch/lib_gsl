@@ -345,6 +345,13 @@ target_include_directories(${LIB_NAME} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
+if(HAVE_INLINE)
+    target_compile_definitions(${LIB_NAME} INTERFACE HAVE_INLINE)
+endif()
+if(HAVE_C99_INLINE)
+    target_compile_definitions(${LIB_NAME} INTERFACE HAVE_C99_INLINE)
+endif()
+
 # Add all targets to the build-tree export set
 export(TARGETS ${LIB_NAME}
     FILE ${PROJECT_BINARY_DIR}/${PACKAGE_UPPER_NAME}Targets.cmake)
