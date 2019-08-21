@@ -153,6 +153,9 @@ endforeach ()
 
 # Extract sources from automake files and add tests.
 foreach (dir "." ${dirs})
+  if(NOT EXISTS ${dir}/Makefile.am)
+    continue()
+  endif()
   file(STRINGS ${dir}/Makefile.am lines)
   foreach (line ${lines})
     if (line MATCHES "_la_SOURCES[ \t]*=")
