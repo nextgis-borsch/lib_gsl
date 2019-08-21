@@ -625,6 +625,60 @@ FUNCTION (test, ops) (size_t stride1, size_t stride2, size_t N)
     TEST2 (status, "_div division");
   }
 
+  {
+    BASE alpha, beta;
+
+    GSL_REAL(alpha) = (ATOMIC) 1;
+    GSL_IMAG(alpha) = (ATOMIC) 2;
+    GSL_REAL(beta) = (ATOMIC) 3;
+    GSL_IMAG(beta) = (ATOMIC) 4;
+    FUNCTION(gsl_vector, memcpy) (v, a);
+    FUNCTION(gsl_vector, axpby) (alpha, b, beta, v);
+  }
+  
+  {
+    int status = 0;
+    
+    for (i = 0; i < N; i++)
+      {
+        BASE r = FUNCTION(gsl_vector,get) (v, i);
+        ATOMIC real = (-3*(ATOMIC)i-81);
+        ATOMIC imag = (90+13*(ATOMIC)i);
+        if (fabs(GSL_REAL(r) - real) > 100 * BASE_EPSILON ||
+            fabs(GSL_IMAG(r) - imag) > 100 * BASE_EPSILON)
+          status = 1;
+      }
+
+    TEST2 (status, "_axpby first");
+  }
+
+  {
+    BASE alpha, beta;
+
+    GSL_REAL(alpha) = (ATOMIC) 1;
+    GSL_IMAG(alpha) = (ATOMIC) 2;
+    GSL_REAL(beta) = (ATOMIC) 0;
+    GSL_IMAG(beta) = (ATOMIC) 0;
+    FUNCTION(gsl_vector, memcpy) (v, a);
+    FUNCTION(gsl_vector, axpby) (alpha, b, beta, v);
+  }
+  
+  {
+    int status = 0;
+    
+    for (i = 0; i < N; i++)
+      {
+        BASE r = FUNCTION(gsl_vector,get) (v, i);
+        ATOMIC real = (-2*(ATOMIC)i-38);
+        ATOMIC imag = (39+6*(ATOMIC)i);
+        if (fabs(GSL_REAL(r) - real) > 100 * BASE_EPSILON ||
+            fabs(GSL_IMAG(r) - imag) > 100 * BASE_EPSILON)
+          status = 1;
+      }
+
+    TEST2 (status, "_axpby second");
+  }
+
   FUNCTION(gsl_vector, free) (a);
   FUNCTION(gsl_vector, free) (b);
   FUNCTION(gsl_vector, free) (v);
@@ -635,41 +689,51 @@ FUNCTION (test, file) (size_t stride, size_t N)
 {
   TYPE (gsl_vector) * v = FUNCTION (create, vector) (stride, N);
   TYPE (gsl_vector) * w = FUNCTION (create, vector) (stride, N);
-
   size_t i;
 
-  FILE *f = tmpfile();
+#ifdef NO_INLINE
+  char filename[] = "test_static.dat";
+#else
+  char filename[] = "test.dat";
+#endif
 
-  /* write file */
+  {
+    /* write file */
+    FILE *f = fopen(filename, "wb");
 
-  for (i = 0; i < N; i++)
-    {
-      BASE x = ZERO;
-      GSL_REAL (x) = (ATOMIC)(N - i);
-      GSL_IMAG (x) = (ATOMIC)(N - i + 1);
-      FUNCTION (gsl_vector, set) (v, i, x);
-    };
+    for (i = 0; i < N; i++)
+      {
+        BASE x = ZERO;
+        GSL_REAL (x) = (ATOMIC)(N - i);
+        GSL_IMAG (x) = (ATOMIC)(N - i + 1);
+        FUNCTION (gsl_vector, set) (v, i, x);
+      };
 
-  FUNCTION (gsl_vector, fwrite) (f, v);
+    FUNCTION (gsl_vector, fwrite) (f, v);
 
-  /* read file */
+    fclose(f);
+  }
 
-  rewind(f);
-  FUNCTION (gsl_vector, fread) (f, w);
+  {
+    /* read file */
+    FILE *f = fopen(filename, "rb");
 
-  status = 0;
-  for (i = 0; i < N; i++)
-    {
-      if (w->data[2 * i * stride] != (ATOMIC) (N - i) || w->data[2 * i * stride + 1] != (ATOMIC) (N - i + 1))
-        status = 1;
-    };
+    FUNCTION (gsl_vector, fread) (f, w);
 
-  fclose (f);
+    status = 0;
+    for (i = 0; i < N; i++)
+      {
+        if (w->data[2 * i * stride] != (ATOMIC) (N - i) || w->data[2 * i * stride + 1] != (ATOMIC) (N - i + 1))
+          status = 1;
+      };
+
+    gsl_test (status, NAME (gsl_vector) "_write and read work");
+
+    fclose (f);
+  }
 
   FUNCTION (gsl_vector, free) (v);
   FUNCTION (gsl_vector, free) (w);
-
-  gsl_test (status, NAME (gsl_vector) "_write and read work");
 }
 
 #if USES_LONGDOUBLE && ! HAVE_PRINTF_LONGDOUBLE
@@ -680,41 +744,51 @@ FUNCTION (test, text) (size_t stride, size_t N)
 {
   TYPE (gsl_vector) * v = FUNCTION (create, vector) (stride, N);
   TYPE (gsl_vector) * w = FUNCTION (create, vector) (stride, N);
-
   size_t i;
 
-  FILE *f = tmpfile();
+#ifdef NO_INLINE
+  char filename[] = "test_static.dat";
+#else
+  char filename[] = "test.dat";
+#endif
 
-  /* write file */
+  {
+    /* write file */
+    FILE *f = fopen(filename, "w");
 
-  for (i = 0; i < N; i++)
-    {
-      BASE x;
-      GSL_REAL (x) = (ATOMIC)i;
-      GSL_IMAG (x) = (ATOMIC)(i + 1);
-      FUNCTION (gsl_vector, set) (v, i, x);
-    };
+    for (i = 0; i < N; i++)
+      {
+        BASE x;
+        GSL_REAL (x) = (ATOMIC)i;
+        GSL_IMAG (x) = (ATOMIC)(i + 1);
+        FUNCTION (gsl_vector, set) (v, i, x);
+      };
 
-  FUNCTION (gsl_vector, fprintf) (f, v, OUT_FORMAT);
+    FUNCTION (gsl_vector, fprintf) (f, v, OUT_FORMAT);
 
-  /* read file */
+    fclose(f);
+  }
 
-  rewind(f);
-  FUNCTION (gsl_vector, fscanf) (f, w);
+  {
+    /* read file */
+    FILE *f = fopen(filename, "r");
 
-  status = 0;
-  for (i = 0; i < N; i++)
-    {
-      if (w->data[2 * i * stride] != (ATOMIC) i || w->data[2 * i * stride + 1] != (ATOMIC) (i + 1))
-        status = 1;
-    };
+    FUNCTION (gsl_vector, fscanf) (f, w);
 
-  fclose (f);
+    status = 0;
+    for (i = 0; i < N; i++)
+      {
+        if (w->data[2 * i * stride] != (ATOMIC) i || w->data[2 * i * stride + 1] != (ATOMIC) (i + 1))
+          status = 1;
+      };
+
+    gsl_test (status, NAME (gsl_vector) "_fprintf and fscanf");
+
+    fclose (f);
+  }
 
   FUNCTION (gsl_vector, free) (v);
   FUNCTION (gsl_vector, free) (w);
-
-  gsl_test (status, NAME (gsl_vector) "_fprintf and fscanf");
 }
 #endif
 

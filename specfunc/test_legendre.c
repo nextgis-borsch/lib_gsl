@@ -451,7 +451,7 @@ test_legendre_unnorm(const size_t lmax_orig, const char *desc)
                                    p_schmidt, dp_schmidt, d2p_schmidt);
       gsl_sf_legendre_deriv2_array(GSL_SF_LEGENDRE_NONE, lmax, x, p, dp, d2p);
 
-      for (l = 0; l <= lmax; ++l)
+      for (l = 0; l <= (size_t) lmax; ++l)
         {
           double a_lm = sqrt(2.0 / (double)l / (l + 1.0));
           size_t idx;
@@ -459,11 +459,20 @@ test_legendre_unnorm(const size_t lmax_orig, const char *desc)
           /* test S(l,0) = P(l,0) */
           idx = gsl_sf_legendre_array_index(l, 0);
           gsl_test_rel(p[idx], p_schmidt[idx], 1.0e-10,
-                       "unnorm l=%zu, m=0, x=%f", l, x);
+                       "legendre unnorm l=%zu, m=0, x=%f", l, x);
           gsl_test_rel(dp[idx], dp_schmidt[idx], 1.0e-10,
-                       "unnorm deriv l=%zu, m=0, x=%f", l, x);
-          gsl_test_rel(d2p[idx], d2p_schmidt[idx], 1.0e-10,
-                       "unnorm deriv2 l=%zu, m=0, x=%f", l, x);
+                       "legendre unnorm deriv l=%zu, m=0, x=%f", l, x);
+
+          if (l > 1)
+            {
+              gsl_test_rel(d2p[idx], d2p_schmidt[idx], 1.0e-10,
+                           "legendre unnorm deriv2 l=%zu, m=0, x=%f", l, x);
+            }
+          else
+            {
+              gsl_test_abs(d2p[idx], d2p_schmidt[idx], 1.0e-10,
+                           "legendre unnorm deriv2 l=%zu, m=0, x=%f", l, x);
+            }
 
           /* test S(l,m) = a_{lm} * P(l,m) for m > 0 */
           for (m = 1; m <= l; ++m)
@@ -471,11 +480,11 @@ test_legendre_unnorm(const size_t lmax_orig, const char *desc)
               idx = gsl_sf_legendre_array_index(l, m);
 
               gsl_test_rel(a_lm * p[idx], p_schmidt[idx], 1.0e-9,
-                           "unnorm l=%zu, m=%zu, x=%f", l, m, x);
+                           "legendre unnorm l=%zu, m=%zu, x=%f", l, m, x);
               gsl_test_abs(a_lm * dp[idx], dp_schmidt[idx], 1.0e-10,
-                           "unnorm deriv l=%zu, m=%zu, x=%f", l, m, x);
+                           "legendre unnorm deriv l=%zu, m=%zu, x=%f", l, m, x);
               gsl_test_abs(a_lm * d2p[idx], d2p_schmidt[idx], 1.0e-10,
-                           "unnorm deriv2 l=%zu, m=%zu, x=%f", l, m, x);
+                           "legendre unnorm deriv2 l=%zu, m=%zu, x=%f", l, m, x);
 
               a_lm /= sqrt((double) (l + m + 1)) *
                       sqrt((double) (l - m));
@@ -484,7 +493,7 @@ test_legendre_unnorm(const size_t lmax_orig, const char *desc)
 
       gsl_sf_legendre_array(GSL_SF_LEGENDRE_NONE, lmax, x, p2);
       /* test if p = p2 */
-      for (l = 0; l <= lmax; ++l)
+      for (l = 0; l <= (size_t) lmax; ++l)
         {
           for (m = 0; m <= l; ++m)
             {

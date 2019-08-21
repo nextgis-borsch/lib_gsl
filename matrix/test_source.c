@@ -1,6 +1,7 @@
 /* matrix/test_source.c
  * 
  * Copyright (C) 1996, 1997, 1998, 1999, 2000, 2007 Gerard Jungman, Brian Gough
+ * Copyright (C) 2019 Patrick Alken
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -421,6 +422,7 @@ FUNCTION (test, ops) (const size_t M, const size_t N)
   
   TYPE (gsl_matrix) * a = FUNCTION (gsl_matrix, calloc) (M, N);
   TYPE (gsl_matrix) * b = FUNCTION (gsl_matrix, calloc) (M, N);
+  TYPE (gsl_matrix) * c = FUNCTION (gsl_matrix, calloc) (N, M);
   TYPE (gsl_matrix) * m = FUNCTION (gsl_matrix, alloc) (M, N);
 
   for (i = 0; i < M; i++)
@@ -442,7 +444,7 @@ FUNCTION (test, ops) (const size_t M, const size_t N)
   {
     int status = (FUNCTION(gsl_matrix,equal) (a,m) != 1);
     gsl_test (status, NAME (gsl_matrix) "_equal matrix equal");
-    }
+  }
   
   FUNCTION (gsl_matrix, add) (m, b);
     
@@ -606,10 +608,189 @@ FUNCTION (test, ops) (const size_t M, const size_t N)
       }
     gsl_test (status, NAME (gsl_matrix) "_swap");
   }
-      
+
+  FUNCTION (gsl_matrix, transpose_memcpy) (c, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < N; j++)
+          {
+            BASE aij = FUNCTION(gsl_matrix,get) (a,i,j);
+            BASE cji = FUNCTION(gsl_matrix,get) (c,j,i);
+            if (aij != cji)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_transpose_memcpy");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (m);
+  FUNCTION (gsl_matrix, tricpy) (CblasLower, CblasNonUnit, m, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < GSL_MIN(i + 1, N); j++)
+          {
+            BASE r = FUNCTION(gsl_matrix,get) (m,i,j);
+            BASE x = FUNCTION(gsl_matrix,get) (a,i,j);
+            if (r != x)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_tricpy CblasLower CblasNonUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (m);
+  FUNCTION (gsl_matrix, tricpy) (CblasLower, CblasUnit, m, b);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < GSL_MIN(i, N); j++)
+          {
+            BASE r = FUNCTION(gsl_matrix,get) (m,i,j);
+            BASE x = FUNCTION(gsl_matrix,get) (b,i,j);
+            if (r != x)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_tricpy CblasLower CblasUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (m);
+  FUNCTION (gsl_matrix, tricpy) (CblasUpper, CblasNonUnit, m, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < M; i++)
+      {
+        for (j = i; j < N; j++)
+          {
+            BASE r = FUNCTION(gsl_matrix,get) (m,i,j);
+            BASE x = FUNCTION(gsl_matrix,get) (a,i,j);
+            if (r != x)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_tricpy CblasUpper CblasNonUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (m);
+  FUNCTION (gsl_matrix, tricpy) (CblasUpper, CblasUnit, m, b);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < M; i++)
+      {
+        for (j = i + 1; j < N; j++)
+          {
+            BASE r = FUNCTION(gsl_matrix,get) (m,i,j);
+            BASE x = FUNCTION(gsl_matrix,get) (b,i,j);
+            if (r != x)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_tricpy CblasUpper CblasUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (c);
+  FUNCTION (gsl_matrix, transpose_tricpy) (CblasLower, CblasUnit, c, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < GSL_MIN(M, N); i++)
+      {
+        for (j = 0; j < i; j++)
+          {
+            BASE aij = FUNCTION(gsl_matrix,get) (a,i,j);
+            BASE cji = FUNCTION(gsl_matrix,get) (c,j,i);
+            if (aij != cji)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_transpose_tricpy CblasLower CblasUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (c);
+  FUNCTION (gsl_matrix, transpose_tricpy) (CblasLower, CblasNonUnit, c, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < GSL_MIN(M, N); i++)
+      {
+        for (j = 0; j <= i; j++)
+          {
+            BASE aij = FUNCTION(gsl_matrix,get) (a,i,j);
+            BASE cji = FUNCTION(gsl_matrix,get) (c,j,i);
+            if (aij != cji)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_transpose_tricpy CblasLower CblasNonUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (c);
+  FUNCTION (gsl_matrix, transpose_tricpy) (CblasUpper, CblasUnit, c, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < GSL_MIN(M, N); i++)
+      {
+        for (j = i + 1; j < GSL_MIN(M, N); j++)
+          {
+            BASE aij = FUNCTION(gsl_matrix,get) (a,i,j);
+            BASE cji = FUNCTION(gsl_matrix,get) (c,j,i);
+            if (aij != cji)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_transpose_tricpy CblasUpper CblasUnit");
+  }
+
+  FUNCTION (gsl_matrix, set_zero) (c);
+  FUNCTION (gsl_matrix, transpose_tricpy) (CblasUpper, CblasNonUnit, c, a);
+    
+  {
+    int status = 0;
+    
+    for (i = 0; i < GSL_MIN(M, N); i++)
+      {
+        for (j = i; j < GSL_MIN(M, N); j++)
+          {
+            BASE aij = FUNCTION(gsl_matrix,get) (a,i,j);
+            BASE cji = FUNCTION(gsl_matrix,get) (c,j,i);
+            if (aij != cji)
+              status = 1;
+          }
+      }
+
+    gsl_test (status, NAME (gsl_matrix) "_transpose_tricpy CblasUpper CblasNonUnit");
+  }
 
   FUNCTION(gsl_matrix, free) (a);
   FUNCTION(gsl_matrix, free) (b);
+  FUNCTION(gsl_matrix, free) (c);
   FUNCTION(gsl_matrix, free) (m);
 }
 
@@ -619,33 +800,42 @@ FUNCTION (test, text) (const size_t M, const size_t N)
 {
   TYPE (gsl_matrix) * m = FUNCTION (gsl_matrix, alloc) (M, N);
 
-  size_t i, j;
-  int k = 0;
+  size_t i, j, k;
 
-  FILE *f = tmpfile();
+#ifdef NO_INLINE
+  char filename[] = "test_static.dat";
+#else
+  char filename[] = "test.dat";
+#endif
 
-  /* write file */
+  {
+    /* write file */
+    FILE *f = fopen(filename, "w");
 
-  for (i = 0; i < M; i++)
-    {
-      for (j = 0; j < N; j++)
-        {
-          k++;
-          FUNCTION (gsl_matrix, set) (m, i, j, (BASE) k);
-        }
-    }
+    k = 0;
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < N; j++)
+          {
+            k++;
+            FUNCTION (gsl_matrix, set) (m, i, j, (BASE) k);
+          }
+      }
 
-  FUNCTION (gsl_matrix, fprintf) (f, m, OUT_FORMAT);
+    FUNCTION (gsl_matrix, fprintf) (f, m, OUT_FORMAT);
+
+    fclose(f);
+  }
 
   /* read file */
 
-  rewind(f);
-
   {
+    FILE *f = fopen(filename, "r");
     TYPE (gsl_matrix) * mm = FUNCTION (gsl_matrix, alloc) (M, N);
     status = 0;
 
     FUNCTION (gsl_matrix, fscanf) (f, mm);
+
     k = 0;
     for (i = 0; i < M; i++)
       {
@@ -660,9 +850,9 @@ FUNCTION (test, text) (const size_t M, const size_t N)
     gsl_test (status, NAME (gsl_matrix) "_fprintf and fscanf");
 
     FUNCTION (gsl_matrix, free) (mm);
-  }
 
-  fclose (f);
+    fclose (f);
+  }
 
   FUNCTION (gsl_matrix, free) (m);
 }
@@ -673,33 +863,41 @@ FUNCTION (test, binary) (const size_t M, const size_t N)
 {
   TYPE (gsl_matrix) * m = FUNCTION (gsl_matrix, calloc) (M, N);
 
-  size_t i, j;
-  size_t k = 0;
+  size_t i, j, k;
 
-  FILE *f = tmpfile();
+#ifdef NO_INLINE
+  char filename[] = "test_static.dat";
+#else
+  char filename[] = "test.dat";
+#endif
 
   /* write file */
+  {
+    FILE *f = fopen(filename, "wb");
 
-  for (i = 0; i < M; i++)
-    {
-      for (j = 0; j < N; j++)
-        {
-          k++;
-          FUNCTION (gsl_matrix, set) (m, i, j, (BASE) k);
-        }
-    }
+    k = 0;
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < N; j++)
+          {
+            k++;
+            FUNCTION (gsl_matrix, set) (m, i, j, (BASE) k);
+          }
+      }
 
-  FUNCTION (gsl_matrix, fwrite) (f, m);
+    FUNCTION (gsl_matrix, fwrite) (f, m);
+
+    fclose(f);
+  }
 
   /* read file */
-
-  rewind(f);
-
   {
+    FILE *f = fopen(filename, "rb");
     TYPE (gsl_matrix) * mm = FUNCTION (gsl_matrix, alloc) (M, N);
     status = 0;
 
     FUNCTION (gsl_matrix, fread) (f, mm);
+
     k = 0;
     for (i = 0; i < M; i++)
       {
@@ -714,9 +912,9 @@ FUNCTION (test, binary) (const size_t M, const size_t N)
     gsl_test (status, NAME (gsl_matrix) "_write and read");
 
     FUNCTION (gsl_matrix, free) (mm);
-  }
 
-  fclose (f);
+    fclose (f);
+  }
 
   FUNCTION (gsl_matrix, free) (m);
 }
@@ -727,34 +925,42 @@ FUNCTION (test, binary_noncontiguous) (const size_t M, const size_t N)
   TYPE (gsl_matrix) * l = FUNCTION (gsl_matrix, calloc) (M+1, N+1);
   VIEW (gsl_matrix, view) m = FUNCTION (gsl_matrix, submatrix) (l, 0, 0, M, N);
 
-  size_t i, j;
-  size_t k = 0;
+  size_t i, j, k;
 
-  FILE *f = tmpfile();
+#ifdef NO_INLINE
+  char filename[] = "test_static.dat";
+#else
+  char filename[] = "test.dat";
+#endif
 
   /* write file */
+  {
+    FILE *f = fopen(filename, "wb");
 
-  for (i = 0; i < M; i++)
-    {
-      for (j = 0; j < N; j++)
-        {
-          k++;
-          FUNCTION (gsl_matrix, set) (&m.matrix, i, j, (BASE) k);
-        }
-    }
+    k = 0;
+    for (i = 0; i < M; i++)
+      {
+        for (j = 0; j < N; j++)
+          {
+            k++;
+            FUNCTION (gsl_matrix, set) (&m.matrix, i, j, (BASE) k);
+          }
+      }
 
-  FUNCTION (gsl_matrix, fwrite) (f, &m.matrix);
+    FUNCTION (gsl_matrix, fwrite) (f, &m.matrix);
+
+    fclose(f);
+  }
 
   /* read file */
-
-  rewind(f);
-
   {
+    FILE *f = fopen(filename, "rb");
     TYPE (gsl_matrix) * ll = FUNCTION (gsl_matrix, alloc) (M+1, N+1);
     VIEW (gsl_matrix, view) mm = FUNCTION (gsl_matrix, submatrix) (ll, 0, 0, M, N);
     status = 0;
 
     FUNCTION (gsl_matrix, fread) (f, &mm.matrix);
+
     k = 0;
     for (i = 0; i < M; i++)
       {
@@ -769,9 +975,9 @@ FUNCTION (test, binary_noncontiguous) (const size_t M, const size_t N)
     gsl_test (status, NAME (gsl_matrix) "_write and read (noncontiguous)");
 
     FUNCTION (gsl_matrix, free) (ll);
-  }
 
-  fclose (f);
+    fclose (f);
+  }
 
   FUNCTION (gsl_matrix, free) (l);
 }
