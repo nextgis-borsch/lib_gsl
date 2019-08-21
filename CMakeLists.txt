@@ -82,13 +82,9 @@ include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})
 # Fix windows build
 if(WIN32)
     file(READ ieee-utils/env.c _ENV_C_CONTENTS)
-    string(REPLACE
-"extern const char *fp_env_string;
-    p = fp_env_string;"
-"if (p == 0) return;
-  if (*p == '\\0') return ;"
-    _ENV_C_CONTENTS
-    "${_ENV_C_CONTENTS}"
+    string(REPLACE "#if defined( _MSC_VER )" "#if 0"
+      _ENV_C_CONTENTS
+      "${_ENV_C_CONTENTS}"
     )
     file(WRITE ieee-utils/env.c "${_ENV_C_CONTENTS}")
     file(WRITE ${CMAKE_BINARY_DIR}/unistd.h "/* nop */")
