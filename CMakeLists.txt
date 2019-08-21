@@ -153,10 +153,11 @@ endforeach ()
 
 # Extract sources from automake files and add tests.
 foreach (dir "." ${dirs})
-  if(NOT EXISTS ${dir}/Makefile.am)
+  message("Check dir: ${dir}")
+  if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/Makefile.am)
     continue()
   endif()
-  file(STRINGS ${dir}/Makefile.am lines)
+  file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/Makefile.am lines)
   foreach (line ${lines})
     if (line MATCHES "_la_SOURCES[ \t]*=")
       get_sources(${dir} "${line}" SOURCES)
@@ -172,13 +173,15 @@ foreach (dir "." ${dirs})
       else ()
         set(GSL_SOURCES ${GSL_SOURCES} ${SOURCES})
       endif ()
-  elseif (line MATCHES "^test.*_SOURCES[ \t]*=" AND BUILD_TESTING)
+    elseif (line MATCHES "^test.*_SOURCES[ \t]*=" AND BUILD_TESTING)
       get_sources(${dir} "${line}" SOURCES)
       string(REGEX REPLACE "(.*)_SOURCES.*" "\\1" suffix ${line})
       add_gsl_test("${dir}_${suffix}" ${SOURCES})
     endif ()
   endforeach ()
 endforeach ()
+
+message("GSL_SOURCES ${GSL_SOURCES}")
 
 set(DEPRICATED_FUNCTIONS
     gsl_multilarge_nlinear_df
