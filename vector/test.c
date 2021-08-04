@@ -30,7 +30,9 @@
 #endif
 
 #include <stdlib.h>
-#include <unistd.h>
+#if HAVE_UNISTD_H
+  #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <gsl/gsl_math.h>
