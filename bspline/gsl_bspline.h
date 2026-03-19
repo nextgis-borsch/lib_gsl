@@ -83,7 +83,7 @@ int gsl_bspline_init (const gsl_vector * t, gsl_bspline_workspace * w);
 
 int gsl_bspline_proj_rhs(const gsl_function * F, gsl_vector * y, gsl_bspline_workspace * w);
 
-INLINE_DECL size_t gsl_bspline_find_interval (const double x, int *flag, gsl_bspline_workspace * w);
+static inline size_t gsl_bspline_find_interval (const double x, int *flag, gsl_bspline_workspace * w);
 
 /* eval.c */
 
@@ -223,7 +223,7 @@ Notes: The error conditions are reported as follows:
        t_i < t_{i+1} = t_{n+k-1} < x         i               +1
 */
 
-INLINE_FUN
+static inline
 size_t
 gsl_bspline_find_interval (const double x, int *flag, gsl_bspline_workspace * w)
 {

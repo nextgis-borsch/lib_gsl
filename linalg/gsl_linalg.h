@@ -925,7 +925,7 @@ int gsl_linalg_tri_UL(gsl_matrix * LU);
 int gsl_linalg_complex_tri_LHL(gsl_matrix_complex * L);
 int gsl_linalg_complex_tri_UL(gsl_matrix_complex * LU);
 
-INLINE_DECL void gsl_linalg_givens (const double a, const double b,
+static inline void gsl_linalg_givens (const double a, const double b,
                                     double *c, double *s);
 INLINE_DECL void gsl_linalg_givens_gv (gsl_vector * v, const size_t i,
                                        const size_t j, const double c,
@@ -935,7 +935,7 @@ INLINE_DECL void gsl_linalg_givens_gv (gsl_vector * v, const size_t i,
 
 /* Generate a Givens rotation (cos,sin) which takes v=(x,y) to (|v|,0) 
    From Golub and Van Loan, "Matrix Computations", Section 5.1.8 */
-INLINE_FUN
+static inline
 void
 gsl_linalg_givens (const double a, const double b, double *c, double *s)
 {

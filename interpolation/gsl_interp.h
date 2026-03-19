@@ -194,11 +194,11 @@ gsl_interp_bsearch(const double x_array[], double x,
 }
 #endif
 
-INLINE_DECL size_t 
+static inline size_t 
 gsl_interp_accel_find(gsl_interp_accel * a, const double x_array[], size_t size, double x);
 
 #ifdef HAVE_INLINE
-INLINE_FUN size_t
+static inline size_t
 gsl_interp_accel_find(gsl_interp_accel * a, const double xa[], size_t len, double x)
 {
   size_t x_index = a->cache;

@@ -31,7 +31,7 @@ gsl_ieee_env_setup (void)
 
   int comma = 0 ;
 
-#if defined( _MSC_VER )
+#if 0  // defined( _MSC_VER )
 
     extern const char *fp_env_string;
 	if(p == 0 || *p == '\0')
